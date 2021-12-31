@@ -1,82 +1,100 @@
-import Head from 'next/head'
+import Head from 'next/head';
+import { getProviders, getSession, useSession } from 'next-auth/react';
 
-export default function Home() {
+import Feed from '../components/Feed';
+import Modal from '../components/Modal';
+import Sidebar from '../components/Sidebar';
+import Widgets from '../components/Widgets';
+import { useRecoilState } from 'recoil';
+import { modalState, profileExistState } from '../atoms/modalAtom';
+import Login from '../components/Login';
+import { useEffect, useState } from 'react';
+import { collection, doc, onSnapshot, query, where } from 'firebase/firestore';
+import { firestore } from '../firebase';
+import NewUserModal from '../components/NewUserModal';
+
+export default function Home({ trendingResults, providers }) {
+  const { data: session } = useSession();
+  const [isOpen, _] = useRecoilState(modalState);
+  const [profiles, setProfiles] = useState([]);
+  const [loggedInUserProfile, setLoggedInUserProfile] = useState([]);
+  const [profileExist, setProfileExist] = useRecoilState(profileExistState);
+
+  if (!session) return <Login providers={providers} />;
+
+  useEffect(
+    () =>
+      onSnapshot(
+        query(doc(firestore, 'profiles', session.user.uid)),
+        (snapshot) => (snapshot.data() ? null : setProfileExist(false))
+      ),
+    [firestore, session]
+  );
+
+  useEffect(
+    () =>
+      onSnapshot(
+        query(
+          collection(firestore, 'profiles'),
+          where('followerIds', 'not-in', [session.user.uid])
+        ),
+        (snapshot) => {
+          setProfiles(snapshot.docs);
+        }
+      ),
+    [firestore, session]
+  );
+
+  useEffect(
+    () =>
+      onSnapshot(
+        query(
+          collection(firestore, 'profiles'),
+          where('userId', '==', session.user.uid)
+        ),
+        (snapshot) => {
+          setLoggedInUserProfile(snapshot.docs);
+        }
+      ),
+    [firestore, session]
+  );
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen py-2">
+    <div>
       <Head>
-        <title>Create Next App</title>
+        <title>Twitter Clone</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main className="flex flex-col items-center justify-center w-full flex-1 px-20 text-center">
-        <h1 className="text-6xl font-bold">
-          Welcome to{' '}
-          <a className="text-blue-600" href="https://nextjs.org">
-            Next.js!
-          </a>
-        </h1>
+      <main className="bg-black flex mx-auto min-h-screen max-w-[1500px]">
+        <Sidebar />
+        <Feed />
+        <Widgets
+          trendingResults={trendingResults}
+          loggedInUserProfile={loggedInUserProfile && loggedInUserProfile}
+          followResults={profiles && profiles}
+        />
 
-        <p className="mt-3 text-2xl">
-          Get started by editing{' '}
-          <code className="p-3 font-mono text-lg bg-gray-100 rounded-md">
-            pages/index.js
-          </code>
-        </p>
-
-        <div className="flex flex-wrap items-center justify-around max-w-4xl mt-6 sm:w-full">
-          <a
-            href="https://nextjs.org/docs"
-            className="p-6 mt-6 text-left border w-96 rounded-xl hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Documentation &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Find in-depth information about Next.js features and API.
-            </p>
-          </a>
-
-          <a
-            href="https://nextjs.org/learn"
-            className="p-6 mt-6 text-left border w-96 rounded-xl hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Learn &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Learn about Next.js in an interactive course with quizzes!
-            </p>
-          </a>
-
-          <a
-            href="https://github.com/vercel/next.js/tree/master/examples"
-            className="p-6 mt-6 text-left border w-96 rounded-xl hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Examples &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Discover and deploy boilerplate example Next.js projects.
-            </p>
-          </a>
-
-          <a
-            href="https://vercel.com/import?filter=next.js&utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className="p-6 mt-6 text-left border w-96 rounded-xl hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Deploy &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
-        </div>
+        {isOpen ? <Modal /> : null}
+        {!profileExist && session ? <NewUserModal /> : null}
       </main>
-
-      <footer className="flex items-center justify-center w-full h-24 border-t">
-        <a
-          className="flex items-center justify-center"
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Powered by{' '}
-          <img src="/vercel.svg" alt="Vercel Logo" className="h-4 ml-2" />
-        </a>
-      </footer>
     </div>
-  )
+  );
+}
+
+export async function getServerSideProps(context) {
+  const trendingResults = await fetch('https://jsonkeeper.com/b/NKEV').then(
+    (res) => res.json()
+  );
+
+  const providers = await getProviders();
+  const session = await getSession(context);
+
+  return {
+    props: {
+      trendingResults,
+      providers,
+      session,
+    },
+  };
 }
