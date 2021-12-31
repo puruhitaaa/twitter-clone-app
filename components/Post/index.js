@@ -19,6 +19,7 @@ import {
   orderBy,
   query,
   setDoc,
+  where,
 } from 'firebase/firestore';
 import { deleteObject, ref } from 'firebase/storage';
 import { useSession } from 'next-auth/react';
@@ -49,7 +50,11 @@ const Post = ({ id, post, postPage }) => {
   useEffect(
     () =>
       onSnapshot(
-        query(collection(firestore, 'replies'), orderBy('timestamp', 'desc')),
+        query(
+          collection(firestore, 'replies'),
+          where('postId', '==', id),
+          orderBy('timestamp', 'desc')
+        ),
         (snapshot) => setReplies(snapshot.docs)
       ),
     [firestore, id]
