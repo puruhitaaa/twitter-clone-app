@@ -3,7 +3,7 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyB6zeXN1PpWDQB_n0u_ZSnYLScbx3K6f9w',
+  apiKey: process.env.REACT_API_KEY,
   authDomain: 'twitter-clone-dceb0.firebaseapp.com',
   projectId: 'twitter-clone-dceb0',
   storageBucket: 'twitter-clone-dceb0.appspot.com',
