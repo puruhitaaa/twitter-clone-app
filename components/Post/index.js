@@ -150,11 +150,14 @@ const Post = ({ id, post, postPage }) => {
             {post?.text}
           </p>
         ) : null}
-        <img
-          alt={`postItem-${post?.tag}`}
-          src={post?.image}
-          className="rounded-2xl max-h-[700px] object-cover"
-        />
+        {post?.image ? (
+          <img
+            alt={`postItem-${post?.tag}`}
+            src={post?.image}
+            className="rounded-2xl max-h-[700px] object-cover"
+          />
+        ) : null}
+
         <div
           className={`text-[#6e767d] flex justify-between w-10/12 ${
             postPage ? 'mx-auto' : null
